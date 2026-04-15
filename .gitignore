@@ -4,6 +4,7 @@ yolo_env/
 # Datos y datasets (pesados)
 data/
 dataset.zip
+https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000
 
 # Resultados de entrenamiento (generados localmente)
 runs/
