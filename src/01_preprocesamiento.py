@@ -6,17 +6,17 @@ import shutil
 from sklearn.model_selection import train_test_split
 from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
 
-# ─── 1. CONFIGURACIÓN DE RUTAS ───────────────────────────────────────────
+# CONFIGURACIÓN DE RUTAS
 PROJECT_ROOT = r"D:\skin-lesion-detector"
 CSV_PATH = os.path.join(PROJECT_ROOT, "data", "raw", "HAM10000_metadata.csv")
 DIR_PART_1 = os.path.join(PROJECT_ROOT, "data", "raw", "HAM10000_images_part_1")
 DIR_PART_2 = os.path.join(PROJECT_ROOT, "data", "raw", "HAM10000_images_part_2")
 
-# ⚠️ OBLIGATORIO: Asegúrate de haber descargado el modelo BASE (vit_b)
+#Asegúrate de haber descargado el modelo BASE (vit_b)
 SAM_CHECKPOINT = os.path.join(PROJECT_ROOT, "sam_vit_b_01ec64.pth") 
 YOLO_DIR = os.path.join(PROJECT_ROOT, "data", "yolo_dataset")
 
-# ─── 2. CONFIGURACIÓN DE CLASES Y BALANCEO ─────────────────────────────
+# CONFIGURACIÓN DE CLASES Y BALANCEO 
 CLASS_MAP = {'akiec': 0, 'bcc': 1, 'bkl': 2, 'df': 3, 'mel': 4, 'nv': 5, 'vasc': 6}
 MAX_IMAGENES_POR_CLASE = 500  # Límite estricto para balancear y acelerar el proceso
 SEMILLA = 42
@@ -45,7 +45,7 @@ def get_best_mask(masks, img_area):
 def balance_and_split_dataset(df):
     """Aplica undersampling y divide el dataset con scikit-learn."""
     print("Balanceando dataset...")
-    # Filtrar clases válidas
+    
     df = df[df['dx'].isin(CLASS_MAP.keys())]
     
     # Balancear tomando un máximo de 500 imágenes por cada una de las 7 clases
@@ -60,7 +60,6 @@ def balance_and_split_dataset(df):
     train_val, test = train_test_split(df_balanceado, test_size=0.10, stratify=df_balanceado['dx'], random_state=SEMILLA)
     train, val = train_test_split(train_val, test_size=0.22, stratify=train_val['dx'], random_state=SEMILLA)
     
-    # Etiquetar cada fila con su carpeta destino para iterar fácilmente
     train = train.copy(); train['split'] = 'train'
     val = val.copy();     val['split'] = 'val'
     test = test.copy();   test['split'] = 'test'
@@ -79,11 +78,11 @@ def main():
     sam = sam_model_registry["vit_b"](checkpoint=SAM_CHECKPOINT)
     sam.to(device=device)
     
-   # OPTIMIZACIÓN CRÍTICA PARA RTX 3050 (4GB VRAM)
+   # OPTIMIZACIÓN PARA RTX 3050 (4GB VRAM)
     mask_generator = SamAutomaticMaskGenerator(
         model=sam,
         points_per_side=16,       
-        points_per_batch=16,      # <--- Esta es la palabra correcta
+        points_per_batch=16,      
         pred_iou_thresh=0.86,
         stability_score_thresh=0.92
     )
@@ -107,7 +106,6 @@ def main():
         img_height, img_width = image.shape[:2]
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # MODO INFERENCIA: Ahorra VRAM al no guardar historial de gradientes
         with torch.inference_mode():
             masks = mask_generator.generate(image_rgb)
         
@@ -119,7 +117,6 @@ def main():
 
         yolo_annotation = convert_to_yolo_bbox(best_mask['bbox'], img_width, img_height, class_id)
 
-        # Guardar .jpg y .txt
         shutil.copy2(img_path, os.path.join(YOLO_DIR, 'images', split, f"{image_id}.jpg"))
         with open(os.path.join(YOLO_DIR, 'labels', split, f"{image_id}.txt"), 'w') as f:
             f.write(yolo_annotation)
@@ -129,7 +126,7 @@ def main():
         # Limpieza de basura en GPU y log cada 50 imágenes
         if procesadas % 50 == 0:
             print(f"[+] Procesadas: {procesadas}/{len(df_final)} | Errores: {errores}")
-            torch.cuda.empty_cache() # Libera la VRAM asfixiada
+            torch.cuda.empty_cache() # Libera la vram
 
     print("\n=== Pipeline Finalizado Exitosamente ===")
     print(f"Listas para entrenar YOLO: {procesadas} imágenes balanceadas.")
