@@ -1,0 +1,17 @@
+# Entorno virtual
+yolo_env/
+
+# Datos y datasets (pesados)
+data/
+dataset.zip
+
+# Resultados de entrenamiento (generados localmente)
+runs/
+
+# Modelos pesados (descargar, no subir)
+*.pt
+*.pth
+
+# Archivos temporales de Python
+__pycache__/
+*.py[cod]
